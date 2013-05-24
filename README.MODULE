@@ -126,4 +126,5 @@ Addy: 001
 310 - 32x = BanFilter
 **  310   = MySQL
 **  311   = TS3
+* 400     = Lokal
 900 - 9xx = Reserved
