@@ -88,6 +88,7 @@ class Fifo:
 class CP(object):
     _instance = None
     _lock = threading.Lock()    
+    _mod_CLI = None
 
     def signal_handler(self, signal, frame):
         self.sLog.outString("");
@@ -157,7 +158,11 @@ class CP(object):
                         except AttributeError:
                             self.mod_cli = "None"
 
-                        self.installed_mods.append([self.handler,self.handler.Master(self), self.mod_cli, item.strip()])
+                        mod = self.handler.Master(self)
+                        if(item.strip() == "mod_CLI"):
+                            self._mod_CLI = mod
+
+                        self.installed_mods.append([self.handler, mod, self.mod_cli, item.strip()])
                         self.sLog.outString("Using Module:" + item.strip())
 
 
@@ -202,7 +207,8 @@ class CP(object):
 
     #Alert CLI
     def ToConsole(self,args):
-        self.m_CLI.writeline(args)
+        if(self._mod_CLI):
+            self._mod_CLI.writeline(args,True)
 
     ## Alter Drones
     def ToSocket(self, args):
@@ -218,6 +224,7 @@ class CP(object):
             self.sLog.outDebug(args)
         if (Logfilter=="Critical"):
             self.sLog.outCritical(args)
+        self.ToConsole(args)
         return
 
     #Put incomming cmds on buffer
@@ -245,6 +252,9 @@ class CP(object):
                 self.StopMods()
                 return False
 
+            if (args.split(" ")[0] == "PRINT"):
+                self.ToConsole(args)
+                continue
                 #If we get a init from network
             if args == "INIT":
                 self.ToSocket("002 2 " + self.Drone_Name) #Send our Name
@@ -354,7 +364,8 @@ class CP(object):
             elif(int(args.split(" ")[2]) == 1):
                 FILEIO.FileIO().WriteToFileSync(args.split(" ")[3],args[self.length:],"ab")
         #SubAddresse 10 liegt im Socket
-
+        #Reload and Start Module X
+        
     def ReloadMod(self,args):
         try:
             self.accessor = args[1]
@@ -377,9 +388,9 @@ class CP(object):
 
         #Woerterbuch suchen...
         try:
-            self.mod_cli = self.handler.CLI_Dict()
+            self.mod_CLI = self.handler.CLI_Dict()
         except AttributeError:
-            self.mod_cli = "None"
+            self.mod_CLI = None
 
         self.m_args = FILEIO.FileIO().ReadLine("./configs/bird.conf")
         self.installed_mods.append([self.handler,self.handler.Master(self), self.mod_cli, self.modname])
@@ -405,16 +416,13 @@ class CP(object):
         except IOError:
             pass
 
-    def GetDictionary(self,module, args):
-        self.i=0
+    def GetDictionary(self,module):
         for self.out in self.installed_mods:
             if (self.out[3] == module):
                 try:
-                    self.dict = self.out[2].get(args);
+                    self.dict = self.out[2];
                     if (self.dict):
                         return self.dict
                 except AttributeError:
-                    self.sLog.outString("This Module has no Commands!", False)
-
-            self.i=self.i+1
-
+                    self.sLog.outString("This Module has no Cli!", False)
+                    return None

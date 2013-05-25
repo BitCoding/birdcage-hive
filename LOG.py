@@ -60,15 +60,11 @@ class sLog: #(object):
     def outCritical(self, args, toFile = True):
         if (toFile == True):
             self.WriteLine(" [CRITICAL] ", args)
-        if self.console_critical == True:
-            print args
         return
 
     def outDebug(self, args, toFile = True):
         if (toFile == True):
             self.WriteLine(" [DEBUG] ", args)
-        if self.console_debug == True:
-            print args
         return
 
     def WriteLine(self,ct, args):

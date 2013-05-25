@@ -96,7 +96,8 @@ class Firewall:
                     handler.writeline ("300 1 "+ str(item[0]) + " " + str(item[1]) + " " + str(item[2]) + " " + str(item[3]))
             else:
                 handler.writeline ("" + str(item[0]) + ", " + str(item[1]) + ", " + str(item[2]) + ", " + str(item[3]))
-
+        if not (handler.ID == "SCK"):
+            handler.writeline ("",True)
     # Whitelist control
     def WhiteListInsert(self, ip, local): #010
         for item in self.whitelist:
@@ -127,6 +128,8 @@ class Firewall:
                     handler.writeline ("" + str(item[0]) + " Global "+ str(item[1]))
                 else:
                     handler.writeline ("" + str(item[0]) + " Local "+ str(item[1]))
+        if not (handler.ID == "SCK"):
+            handler.writeline ("",True)
         return
 
     def InsertBlackRange(self, name, range, local):
@@ -166,6 +169,8 @@ class Firewall:
                     handler.writeline ("%s %s Global" % (self.name, self.range))
                 else:
                     handler.writeline ("%s %s Local" % (self.name, self.range))
+        if not (handler.ID == "SCK"):
+            handler.writeline ("",True)
         return
 
     def InsertBlackPort(self, port, type):
@@ -281,6 +286,7 @@ class Firewall:
             return
 
         handler.writeline ("Firewall statistic")
+
         self.loc = 0
         self.glob = 0
         self.all = 0
@@ -291,9 +297,8 @@ class Firewall:
             else:
                 self.loc = self.loc+1
 
-        handler.writeline ("Blacklist: All %s - Local %s - Global %s" % (self.all, self.loc, self.glob))
+        handler.writeline ("Blacklist: All %s - Local %s - Global %s" % (self.all, self.loc, self.glob),True)
         return
-
 
 ## define Checking-Thread
 class Master(threading.Thread):
@@ -486,64 +491,193 @@ class Master(threading.Thread):
 
 #CLI Dictionary
 class CLI_Dict:
-    def get(self,args):
+    CP = None
+    CLI = None
+    init = False
+    helper = None
+
+    def initIT(self,CP,CLI,helper):
+        ## Set the CP
+        if not (self.init):
+            self.CP = CP
+            self.CLI = CLI
+            self.helper = helper
+            init = True
+    def get_names(self):
+        # This method used to pull in base class attributes
+        # at a time dir() didn't do it yet.
+        return dir(self.__class__)
+
+    def help_version(self):
+        print '\n'.join([ 'version',
+                          'version from modul',
+                        ])
+    def do_version(self, arg):
+        print (m_version)
+        return False
+
+    OPTIONS = ['insert','ginsert','remove','gremove','show']
+
+    def complete_blacklist(self, text, line, begidx, endidx):
+        completions = []
+        b = line.split(" ")
+        maxlen = len(b) - 1
+
+        if(maxlen == 1):
+            if not text:
+                completions = self.OPTIONS[:]
+            else:
+                for t in self.OPTIONS:
+                    if(t.startswith(text)):
+                        completions.append(t)
+
+        return completions
+
+    def help_blacklist(self):
+        print '\n'.join([ 'blacklist [option=insert/ginsert/remove/gremove/show] [ARGS]',
+                          'option)',
+                          '       - insert   ',
+                          '       - ginsert  ',
+                          '       - remove   ',
+                          '       - gremove  ',
+                          '       - show     ',
+                        ])
+    def do_blacklist(self, arg):
         try:
-            self.maxlen = len(args.split(" ")) - 1
-            if (args.split(" ")[0] == "version"):
-                print (m_version)
-                return
-            if (args.split(" ")[0] == "status"):
-                return "300 20"
-            if (args.split(" ")[0] == "blacklist"):
-                if (self.maxlen >= 1):
-                    #Insert local (ip,connection)
-                    if (args.split(" ")[1] == "insert"):
-                        try:
-                            return "300 1 " + args.split(" ")[2].strip() + " " + args.split(" ")[3].strip() + " " + str(int((time.time() + int(args.split(" ")[4].strip()))))  + " 1";
-                        except IndexError:
-                            return "300 1 " + args.split(" ")[2].strip()  + " 0 0 1";
-                    #Insert global (ip,connection)
-                    if (args.split(" ")[1] == "ginsert"):
-                        try:
-                            return "300 1 " + args.split(" ")[2].strip() + " " + args.split(" ")[3].strip() + " " + str(int((time.time() + int(args.split(" ")[4].strip()))))  + " 0";
-                        except IndexError:
-                            return "300 1 " + args.split(" ")[2].strip() + " 0 0 0";
+            b = arg.split(" ")
+            maxlen = len(b) - 1
+            if(maxlen >= 1):
+                #Insert local (ip,connection)
+                if (b[0] == "insert"):
+                    try:
+                        return "300 1 " + b[1].strip() + " " + b[2].strip() + " " + str(int((time.time() + int(b[3].strip()))))  + " 1";
+                    except IndexError:
+                        return "300 1 " + b[1].strip()  + " 0 0 1";
+                #Insert global (ip,connection)
+                if (b[0] == "ginsert"):
+                    try:
+                        return "300 1 " + b[1].strip() + " " + b[2].strip() + " " + str(int((time.time() + int(b[3].strip()))))  + " 0";
+                    except IndexError:
+                        return "300 1 " + b[1].strip() + " 0 0 0";
 
-                    #Remove local (ip)
-                    if (args.split(" ")[1] == "remove"):
-                        return "300 2 " + args.split(" ")[2].strip();
-                    #Remove global (ip)gremove
-                    if (args.split(" ")[1] == "gremove"):
-                        return "300 3 " + args.split(" ")[2].strip();
-                    #show the blacklist
-                    if (args.split(" ")[1] == "show"):
-                        return "300 4"
+                #Remove local (ip)
+                if (b[0] == "remove"):
+                    return "300 2 " + b[1].strip();
+                #Remove global (ip)gremove
+                if (b[0] == "gremove"):
+                    return "300 3 " + b[1].strip();
+            #show the blacklist
+            if (b[0] == "show"):
+                return "300 4"
+            self.help_blacklist()
+            return False
+        except IndexError:
+            self.help_blacklist()
+            return False
 
-            if (args.split(" ")[0] == "whitelist"):
-                if (self.maxlen >= 1):
-                    if (args.split(" ")[1] == "insert"):
-                        return "300 10 " + args.split(" ")[2].strip() + " 1";
-                    if (args.split(" ")[1] == "ginsert"):
-                        return "300 10 " + args.split(" ")[2].strip() + " 0";
-                    if (args.split(" ")[1] == "remove"):
-                        return "300 11 " + args.split(" ")[2].strip();
-                    if (args.split(" ")[1] == "gremove"):
-                        return "300 12 " + args.split(" ")[2].strip();
-                    #show the whitelist
-                    if (args.split(" ")[1] == "show"):
-                            return "300 13"
-            if (args.split(" ")[0].strip() == "rangeban"):
-                if (self.maxlen >= 1):
-                    if (args.split(" ")[1].strip() == "insert"):
-                        return "300 30 1 %s %s " %(args.split(" ")[2].strip(), args.split(" ")[3].strip())
-                    if (args.split(" ")[1].strip() == "ginsert"):
-                        return "300 30 0 %s %s " %(args.split(" ")[2].strip(), args.split(" ")[3].strip())
-                    if (args.split(" ")[1] == "remove"):
-                        return "300 31 1 " + (args.split(" ")[2].strip())
-                    if (args.split(" ")[1] == "gremove"):
-                        return "300 31 0 " + (args.split(" ")[2].strip())
-                    if (args.split(" ")[1] == "show"):
-                            return "300 32"
+    def complete_whitelist(self, text, line, begidx, endidx):
+        completions = []
+        b = line.split(" ")
+        maxlen = len(b) - 1
+
+        if(maxlen == 1):
+            if not text:
+                completions = self.OPTIONS[:]
+            else:
+                for t in self.OPTIONS:
+                    if(t.startswith(text)):
+                        completions.append(t)
+
+        return completions
+
+    def help_whitelist(self):
+        print '\n'.join([ 'whitelist [option=insert/ginsert/remove/gremove/show] [ARGS]',
+                          'option)',
+                          '       - insert   ',
+                          '       - ginsert  ',
+                          '       - remove   ',
+                          '       - gremove  ',
+                          '       - show     ',
+                        ])
+    def do_whitelist(self, arg):
+        try:
+            b = arg.split(" ")
+            maxlen = len(b) - 1
+            if(maxlen >= 1):
+                if (b[0] == "insert"):
+                    return "300 10 " + b[1].strip() + " 1";
+                if (b[0] == "ginsert"):
+                    return "300 10 " + b[1].strip() + " 0";
+                if (b[0] == "remove"):
+                    return "300 11 " + b[1].strip();
+                if (b[0] == "gremove"):
+                    return "300 12 " + b[1].strip();
+            #show the whitelist
+            if (b[0] == "show"):
+                return "300 13"
+            self.help_whitelist()
+            return False
+        except IndexError:
+            self.help_whitelist()
+            return False
+
+    def complete_rangeban(self, text, line, begidx, endidx):
+        completions = []
+        b = line.split(" ")
+        maxlen = len(b) - 1
+
+        if(maxlen == 1):
+            if not text:
+                completions = self.OPTIONS[:]
+            else:
+                for t in self.OPTIONS:
+                    if(t.startswith(text)):
+                        completions.append(t)
+
+        return completions
+
+    def help_rangeban(self):
+        print '\n'.join([ 'rangeban [option=insert/ginsert/remove/gremove/show] [ARGS]',
+                          'option)',
+                          '       - insert   ',
+                          '       - ginsert  ',
+                          '       - remove   ',
+                          '       - gremove  ',
+                          '       - show     ',
+                        ])
+    def do_rangeban(self, arg):
+        try:
+            b = arg.split(" ")
+            maxlen = len(b) - 1
+            if(maxlen >= 1):
+                if (b[0] == "insert"):
+                    return "300 30 1 %s %s " %(b[1].strip(), b[2].strip())
+                if (b[0] == "ginsert"):
+                    return "300 30 0 %s %s " %(b[1].strip(), b[2].strip())
+                if (b[0] == "remove"):
+                    return "300 31 1 " + (b[1].strip())
+                if (b[0] == "gremove"):
+                    return "300 31 0 " + (b[1].strip())
+            if (b[0] == "show"):
+                return "300 32"
+            self.help_rangeban()
+            return False
+        except IndexError:
+            self.help_rangeban()
+            return False
+
+    def help_status(self):
+        print '\n'.join([ 'status',
+                          'Statistic from the Firewall',
+                        ])
+    def do_status(self, arg):
+        return "300 20"
+
+    def get(self,arg):
+        try:
+            cmd  = arg[0]
+            args = arg[1]
+
         except IndexError:
             print args
             return
