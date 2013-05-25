@@ -41,14 +41,7 @@ class Fifo:
             return self.first_a.popleft(), self.first_b.popleft()
         except (IndexError):
             pass
-        
-    def Update(self):
-        if LOCK.acquire(False): # Non-blocking            
-            LOCK.release()
-        else:
-            self.CP.ToLog("Critical", "Couldn't get the lock. Screen::Update")
-        return
-            
+
     def hascontent(self):
         if (len(self.first_a) > 0):
             return True
@@ -84,7 +77,7 @@ class Screen:
     def cmd(self, screen , cmd):
         for t in self.screens:
             if(screen == 0):
-                if(t[0] == ""):
+                if not (t):
                     continue
                 pid = self.GetPid(t[0])
                 if(pid == False):
@@ -135,7 +128,7 @@ class Screen:
         for t in self.screens:
             if(t[0] ==  screen):
                 return [t[0],t[1],t[2],t[3],t[4],t[5]]
-        return ["NULL",0,0,0,0]
+        return ["NULL",0,0,0,0,0]
 
     def _StartScreen(self,t):
         if(self.GetPid(t[0]) == False):
