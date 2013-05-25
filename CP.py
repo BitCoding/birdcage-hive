@@ -314,7 +314,7 @@ class CP(object):
             for self.out in self.installed_mods:
                 if (self.out[3] == args.split(" ")[2]):
                     if self.out[1].stop():
-                        self.sLog.outString("Module " + out[3].strip() + " stopped.")
+                        self.ToConsole("Module " + self.out[3].strip() + " stopped.")
                 self.i=self.i+1
 
         #Reload and Start Module X
@@ -374,7 +374,7 @@ class CP(object):
             return
 
         if self.accessor.stop():
-            self.sLog.outString("Module " + args[3].strip() + " stopped.")
+            self.ToConsole("Module " + self.out[3].strip() + " stopped.")
 
         self.modname = args[3].strip()
         self.index = self.installed_mods.index(args)
@@ -398,7 +398,8 @@ class CP(object):
         self.accessor = self.GetModulebyName(self.modname)
         self.accessor[1].config(self.m_args, self)
         self.accessor[1].start();
-        self.sLog.outString("Module reloaded: " + self.installed_mods[self.installed_mods.index(self.accessor)][3])
+
+        self.ToConsole("Module reloaded: " + self.installed_mods[self.installed_mods.index(self.accessor)][3])
         return
 
     def SendModule(self,args):

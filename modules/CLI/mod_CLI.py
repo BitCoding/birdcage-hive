@@ -137,36 +137,6 @@ class Master(threading.Thread):
             self.CP.command (self.output, self)
         return
 
-    #internalCommands
-    def internalCommands(self,args):
-        self.omv = args.split(" ")
-        self.offset = 1
-
-        if (self.omv[0].strip() == "module"):
-            self.out = ""
-            try:
-                if (self.omv[1].strip() == "stop"):
-                    self.out = "001 2 " + self.omv[2];
-                elif (self.omv[1].strip() == "start"):
-                    self.out = "001 3 " + self.omv[2] ;
-                elif (self.omv[1].strip() == "export"):
-                    self.out = "001 4 " + self.omv[2];
-                elif (self.omv[1].strip() == "export-all"):
-                    self.out = "001 6"
-                self.CP.command(self.out,self)
-                return True
-            except IndexError:
-                self.writeline("Ya have to type in a modulename")
-                return True
-
-        if (args.split(" ")[0] == "cli_test"):
-            try:
-                self.CP.command("001 8 " + args.split(" ")[1] + " "+  args.split(" ")[2], self)
-                return True
-            except IndexError:
-                self.writeline("TestCommand");
-                return True
-
     def parseline(self, line):
         """Parse the line into a command name and a string containing
         the arguments.  Returns a tuple containing (command, args, line).
@@ -385,12 +355,72 @@ class Master(threading.Thread):
             func = getattr(self, 'help_list')
             func()
         return
+    MOPTS = ['start','stop','export','export-all']
+    def complete_module(self, text, line, begidx, endidx):
+        completions = []
+        try:
+            l = line.split(" ")[2]
+            t = True
+        except IndexError:
+            t = False
 
+        if(t):
+            if not text:
+                completions = self.MOPTS[:]
+            else:
+                for t in self.MOPTS:
+                    if(t.startswith(text)):
+                        completions.append(t)
+        else:
+            if not text:
+                for f in self.CP.installed_mods:
+                    if not (f[3] == "mod_CLI"):
+                        completions.append(f[3])
+            else:
+                for f in self.CP.installed_mods:
+                    if not (f[3] == "mod_CLI"):
+                        if(f[3].startswith(text)):
+                            completions.append(f[3])
+
+        return completions
+
+    def help_module(self):
+        print '\n'.join([ 'module [name] [option=start/stop/export/export-all]',
+                          'name= Of window',
+                          'option)',
+                          '       - start        Start Screen',
+                          '       - stop         Stop Screen',
+                          '       - export       Restart Screen',
+                          '       - export-all   Sow Running State',
+                        ])
     def do_module(self,arg):
-        if (self.active_module  == ""):
-            func = getattr(self, 'help_use')
-
-        return
+        if not (self.active_module):
+            b = arg.split(" ")
+            maxlen = len(b) - 1
+            if(maxlen >= 1):
+                out = ""
+                try:
+                    if (b[1].strip() == "stop"):
+                        out = "001 2 " + b[0];
+                    elif (b[1].strip() == "start"):
+                        out = "001 3 " + b[0];
+                    elif (b[1].strip() == "export"):
+                        out = "001 4 " + b[0];
+                    elif (b[1].strip() == "export-all"):
+                        out = "001 6"
+                    self.CP.command(out,self)
+                    return 
+                except IndexError:
+                    func = getattr(self, 'help_module')
+                    func()
+                    return
+            func = getattr(self, 'help_module')
+            func()
+            return
+        else:
+            func = getattr(self, 'help_exit')
+            func()
+            return
 
     def complete_use(self, text, line, begidx, endidx):
         completions = []
